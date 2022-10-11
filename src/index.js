@@ -1,5 +1,18 @@
-import * as THREE from 'three';
-import { BufferGeometry, Color, Float32BufferAttribute, Vector3 } from 'three';
+import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry";
+import {BufferGeometry, Color, Float32BufferAttribute, Vector3, Vector2,
+    LineBasicMaterial,
+    Line,
+    Object3D,
+    LineDashedMaterial,
+    ArcCurve,
+    MeshBasicMaterial,
+    Mesh,
+    PointsMaterial,
+    Points,
+    UniformsLib,
+    ShaderChunk,
+    UniformsUtils,
+    Scene, Box3, OrthographicCamera, WebGLRenderer, EllipseCurve } from 'three';
 import { OrbitControls } from './OrbitControls';
 import bSpline from './bspline';
 import { Text } from 'troika-three-text'
@@ -19,8 +32,8 @@ var THREEx = { Math: {} };
  * @return {Number} the angle
  */
 THREEx.Math.angle2 = function (p1, p2) {
-    var v1 = new THREE.Vector2(p1.x, p1.y);
-    var v2 = new THREE.Vector2(p2.x, p2.y);
+    var v1 = new Vector2(p1.x, p1.y);
+    var v2 = new Vector2(p2.x, p2.y);
     v2.sub(v1); // sets v2 to be our chord
     v2.normalize();
     if (v2.y < 0) return -Math.acos(v2.x);
@@ -50,8 +63,8 @@ function getBulgeCurvePoints(startPoint, endPoint, bulge, segments) {
         thetaAngle;
 
     var obj = {};
-    obj.startPoint = p0 = startPoint ? new THREE.Vector2(startPoint.x, startPoint.y) : new THREE.Vector2(0, 0);
-    obj.endPoint = p1 = endPoint ? new THREE.Vector2(endPoint.x, endPoint.y) : new THREE.Vector2(1, 0);
+    obj.startPoint = p0 = startPoint ? new Vector2(startPoint.x, startPoint.y) : new Vector2(0, 0);
+    obj.endPoint = p1 = endPoint ? new Vector2(endPoint.x, endPoint.y) : new Vector2(1, 0);
     obj.bulge = bulge = bulge || 1;
 
     angle = 4 * Math.atan(bulge);
@@ -64,11 +77,11 @@ function getBulgeCurvePoints(startPoint, endPoint, bulge, segments) {
 
     var vertices = [];
 
-    vertices.push(new THREE.Vector3(p0.x, p0.y, 0));
+    vertices.push(new Vector3(p0.x, p0.y, 0));
 
     for (i = 1; i <= segments - 1; i++) {
         vertex = THREEx.Math.polar(center, Math.abs(radius), startAngle + thetaAngle * i);
-        vertices.push(new THREE.Vector3(vertex.x, vertex.y, 0));
+        vertices.push(new Vector3(vertex.x, vertex.y, 0));
     }
 
     return vertices;
@@ -87,7 +100,7 @@ export function Viewer(data, parent, width, height, font) {
 
     createLineTypeShaders(data);
 
-    var scene = new THREE.Scene();
+    var scene = new Scene();
 
     // Create scene from dxf object (data)
     var i, entity, obj, min_x, min_y, min_z, max_x, max_y, max_z;
@@ -100,7 +113,7 @@ export function Viewer(data, parent, width, height, font) {
         obj = drawEntity(entity, data);
 
         if (obj) {
-            var bbox = new THREE.Box3().setFromObject(obj);
+            var bbox = new Box3().setFromObject(obj);
             if (isFinite(bbox.min.x) && (dims.min.x > bbox.min.x)) dims.min.x = bbox.min.x;
             if (isFinite(bbox.min.y) && (dims.min.y > bbox.min.y)) dims.min.y = bbox.min.y;
             if (isFinite(bbox.min.z) && (dims.min.z > bbox.min.z)) dims.min.z = bbox.min.z;
@@ -146,12 +159,12 @@ export function Viewer(data, parent, width, height, font) {
         }
     };
 
-    var camera = new THREE.OrthographicCamera(viewPort.left, viewPort.right, viewPort.top, viewPort.bottom, 1, 19);
+    var camera = new OrthographicCamera(viewPort.left, viewPort.right, viewPort.top, viewPort.bottom, 1, 19);
     camera.position.z = 10;
     camera.position.x = viewPort.center.x;
     camera.position.y = viewPort.center.y;
 
-    var renderer = this.renderer = new THREE.WebGLRenderer();
+    var renderer = this.renderer = new WebGLRenderer();
     renderer.setSize(width, height);
     renderer.setClearColor(0xfffffff, 1);
 
@@ -234,7 +247,7 @@ export function Viewer(data, parent, width, height, font) {
         var yrad = xrad * entity.axisRatio;
         var rotation = Math.atan2(entity.majorAxisEndPoint.y, entity.majorAxisEndPoint.x);
 
-        var curve = new THREE.EllipseCurve(
+        var curve = new EllipseCurve(
             entity.center.x, entity.center.y,
             xrad, yrad,
             entity.startAngle, entity.endAngle,
@@ -243,11 +256,11 @@ export function Viewer(data, parent, width, height, font) {
         );
 
         var points = curve.getPoints(50);
-        var geometry = new THREE.BufferGeometry().setFromPoints(points);
-        var material = new THREE.LineBasicMaterial({ linewidth: 1, color: color });
+        var geometry = new BufferGeometry().setFromPoints(points);
+        var material = new LineBasicMaterial({ linewidth: 1, color: color });
 
         // Create the final object to add to the scene
-        var ellipse = new THREE.Line(geometry, material);
+        var ellipse = new Line(geometry, material);
         return ellipse;
     }
 
@@ -264,7 +277,7 @@ export function Viewer(data, parent, width, height, font) {
         var txt = createTextForScene(content.text, content.style, entity, color);
         if (!txt) return null;
 
-        var group = new THREE.Object3D();
+        var group = new Object3D();
         group.add(txt);
         return group;
     }
@@ -328,7 +341,7 @@ export function Viewer(data, parent, width, height, font) {
         }
         if (entity.directionVector) {
             var dv = entity.directionVector;
-            textEnt.rotation.z = new THREE.Vector3(1, 0, 0).angleTo(new THREE.Vector3(dv.x, dv.y, dv.z));
+            textEnt.rotation.z = new Vector3(1, 0, 0).angleTo(new Vector3(dv.x, dv.y, dv.z));
         }
         switch (entity.attachmentPoint) {
             case 1:
@@ -400,9 +413,9 @@ export function Viewer(data, parent, width, height, font) {
 
         var points = getBSplinePolyline(entity.controlPoints, entity.degreeOfSplineCurve, entity.knotValues, 100);
 
-        var geometry = new THREE.BufferGeometry().setFromPoints(points);
-        var material = new THREE.LineBasicMaterial({ linewidth: 1, color: color });
-        var splineObject = new THREE.Line(geometry, material);
+        var geometry = new BufferGeometry().setFromPoints(points);
+        var material = new LineBasicMaterial({ linewidth: 1, color: color });
+        var splineObject = new Line(geometry, material);
 
         return splineObject;
     }
@@ -444,7 +457,7 @@ export function Viewer(data, parent, width, height, font) {
                 t = Math.max(t, 0)
                 t = Math.min(t, 1)
                 const p = bSpline(t, degree, controlPointsForLib, knots, weights)
-                polyline.push(new THREE.Vector2(p[0], p[1]));
+                polyline.push(new Vector2(p[0], p[1]));
             }
         }
         return polyline
@@ -471,7 +484,7 @@ export function Viewer(data, parent, width, height, font) {
                 points.push.apply(points, bulgePoints);
             } else {
                 vertex = entity.vertices[i];
-                points.push(new THREE.Vector3(vertex.x, vertex.y, 0));
+                points.push(new Vector3(vertex.x, vertex.y, 0));
             }
 
         }
@@ -484,14 +497,14 @@ export function Viewer(data, parent, width, height, font) {
         }
 
         if (lineType && lineType.pattern && lineType.pattern.length !== 0) {
-            material = new THREE.LineDashedMaterial({ color: color, gapSize: 4, dashSize: 4 });
+            material = new LineDashedMaterial({ color: color, gapSize: 4, dashSize: 4 });
         } else {
-            material = new THREE.LineBasicMaterial({ linewidth: 1, color: color });
+            material = new LineBasicMaterial({ linewidth: 1, color: color });
         }
 
         var geometry = new BufferGeometry().setFromPoints(points);
 
-        line = new THREE.Line(geometry, material);
+        line = new Line(geometry, material);
         return line;
     }
 
@@ -505,18 +518,18 @@ export function Viewer(data, parent, width, height, font) {
             endAngle = entity.endAngle;
         }
 
-        var curve = new THREE.ArcCurve(
+        var curve = new ArcCurve(
             0, 0,
             entity.radius,
             startAngle,
             endAngle);
 
         var points = curve.getPoints(32);
-        var geometry = new THREE.BufferGeometry().setFromPoints(points);
+        var geometry = new BufferGeometry().setFromPoints(points);
 
-        var material = new THREE.LineBasicMaterial({ color: getColor(entity, data) });
+        var material = new LineBasicMaterial({ color: getColor(entity, data) });
 
-        var arc = new THREE.Line(geometry, material);
+        var arc = new Line(geometry, material);
         arc.position.x = entity.center.x;
         arc.position.y = entity.center.y;
         arc.position.z = entity.center.z;
@@ -546,7 +559,7 @@ export function Viewer(data, parent, width, height, font) {
 
     function drawSolid(entity, data) {
         var material, verts,
-            geometry = new THREE.BufferGeometry();
+            geometry = new BufferGeometry();
 
         var points = entity.points;
         // verts = geometry.vertices;
@@ -554,10 +567,10 @@ export function Viewer(data, parent, width, height, font) {
         addTriangleFacingCamera(verts, points[0], points[1], points[2]);
         addTriangleFacingCamera(verts, points[1], points[2], points[3]);
 
-        material = new THREE.MeshBasicMaterial({ color: getColor(entity, data) });
+        material = new MeshBasicMaterial({ color: getColor(entity, data) });
         geometry.setFromPoints(verts);
 
-        return new THREE.Mesh(geometry, material);
+        return new Mesh(geometry, material);
     }
 
     function drawText(entity, data) {
@@ -566,16 +579,16 @@ export function Viewer(data, parent, width, height, font) {
         if (!font)
             return console.warn('Text is not supported without a Three.js font loaded with THREE.FontLoader! Load a font of your choice and pass this into the constructor. See the sample for this repository or Three.js examples at http://threejs.org/examples/?q=text#webgl_geometry_text for more details.');
 
-        geometry = new THREE.TextGeometry(entity.text, { font: font, height: 0, size: entity.textHeight || 12 });
+        geometry = new TextGeometry(entity.text, { font: font, height: 0, size: entity.textHeight || 12 });
 
         if (entity.rotation) {
             var zRotation = entity.rotation * Math.PI / 180;
             geometry.rotateZ(zRotation);
         }
 
-        material = new THREE.MeshBasicMaterial({ color: getColor(entity, data) });
+        material = new MeshBasicMaterial({ color: getColor(entity, data) });
 
-        text = new THREE.Mesh(geometry, material);
+        text = new Mesh(geometry, material);
         text.position.x = entity.startPoint.x;
         text.position.y = entity.startPoint.y;
         text.position.z = entity.startPoint.z;
@@ -586,14 +599,14 @@ export function Viewer(data, parent, width, height, font) {
     function drawPoint(entity, data) {
         var geometry, material, point;
 
-        geometry = new THREE.BufferGeometry();
+        geometry = new BufferGeometry();
 
         geometry.setAttribute('position', new Float32BufferAttribute([entity.position.x, entity.position.y, entity.position.z], 3));
 
         var color = getColor(entity, data);
 
-        material = new THREE.PointsMaterial({ size: 0.1, color: new Color(color) });
-        point = new THREE.Points(geometry, material);
+        material = new PointsMaterial({ size: 0.1, color: new Color(color) });
+        point = new Points(geometry, material);
         scene.add(point);
     }
 
@@ -602,7 +615,7 @@ export function Viewer(data, parent, width, height, font) {
 
         if (!block || !block.entities) return null;
 
-        var group = new THREE.Object3D();
+        var group = new Object3D();
         // if(entity.anchorPoint) {
         //     group.position.x = entity.anchorPoint.x;
         //     group.position.y = entity.anchorPoint.y;
@@ -622,7 +635,7 @@ export function Viewer(data, parent, width, height, font) {
 
         if (!block.entities) return null;
 
-        var group = new THREE.Object3D()
+        var group = new Object3D()
 
         if (entity.xScale) group.scale.x = entity.xScale;
         if (entity.yScale) group.scale.y = entity.yScale;
@@ -678,10 +691,10 @@ export function Viewer(data, parent, width, height, font) {
             totalLength += Math.abs(pattern[i]);
         }
 
-        dashedLineShader.uniforms = THREE.UniformsUtils.merge([
+        dashedLineShader.uniforms = UniformsUtils.merge([
 
-            THREE.UniformsLib['common'],
-            THREE.UniformsLib['fog'],
+            UniformsLib['common'],
+            UniformsLib['fog'],
 
             {
                 'pattern': { type: 'fv1', value: pattern },
@@ -695,11 +708,11 @@ export function Viewer(data, parent, width, height, font) {
 
             'varying float vLineDistance;',
 
-            THREE.ShaderChunk['color_pars_vertex'],
+            ShaderChunk['color_pars_vertex'],
 
             'void main() {',
 
-            THREE.ShaderChunk['color_vertex'],
+            ShaderChunk['color_vertex'],
 
             'vLineDistance = lineDistance;',
 
@@ -717,8 +730,8 @@ export function Viewer(data, parent, width, height, font) {
 
             'varying float vLineDistance;',
 
-            THREE.ShaderChunk['color_pars_fragment'],
-            THREE.ShaderChunk['fog_pars_fragment'],
+            ShaderChunk['color_pars_fragment'],
+            ShaderChunk['fog_pars_fragment'],
 
             'void main() {',
 
@@ -736,8 +749,8 @@ export function Viewer(data, parent, width, height, font) {
 
             '}',
 
-            THREE.ShaderChunk['color_fragment'],
-            THREE.ShaderChunk['fog_fragment'],
+            ShaderChunk['color_fragment'],
+            ShaderChunk['fog_fragment'],
 
             '}'
         ].join('\n');
@@ -804,6 +817,3 @@ function showHide(el, show) {
 // helper functions
 function show(el) { showHide(el, true); }
 function hide(el) { showHide(el); }
-
-
-
